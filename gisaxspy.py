@@ -22,6 +22,9 @@ class gisaxsExperiment:
     qylim = [-0.6, 0.6]
     qzlim = [0, 0.7]
     wli_offset = 0
+    dpi = 80
+
+    time_format = 'minutes'  # options are: 'minutes', 'seconds'
 
     phi_plot = True
 
@@ -45,28 +48,37 @@ class gisaxsExperiment:
         # sync data
         self.syncData()
 
+    def getLeadingZeros(self, imnum):
+        num_len = self.tifpath.count('#')
+        num_str = str(imnum)
+        return (num_len - len(num_str))
+
     def showWLI(self):
         x = self.wliData[:,0]
         y = self.wliData[:,1]
+        plt.xlabel('ERROR: time_format set incorrectly. Chose minutes or seconds.')
+
+        if self.time_format == 'seconds':
+            plt.xlabel('time [s]')
+        elif self.time_format == 'minutes':
+            plt.xlabel('time [min]')
+            x = x/60.0
 
         if self.phi_plot:
-            plt.plot(x, self.Ddry/y)
+            y =  self.Ddry / y
             plt.ylabel('$\phi$')
         else:
-            plt.plot(x/60, y)
             plt.ylabel('thickness [nm]')
 
-        plt.xlabel('time [s]')
+        plt.plot(x,y,'.')
         plt.show()
 
     def getPath(self, imnum):
-        num_len = self.tifpath.count('#')
-        num_str = str(imnum)
-        leading_zeros = num_len - len(num_str)
-        full_path = self.tifpath.replace(num_len*'#', leading_zeros*'0' + num_str)
+        leading_zeros = self.getLeadingZeros(imnum)
+        full_path = self.tifpath.replace(len(str(imnum))*'#', leading_zeros*'0' + str(imnum))
         return full_path
 
-    def showImg(self, imnum):
+    def plotImg(self, imnum):
         qy1 = self.qylim[0]
         qy2 = self.qylim[1]
         qz1 = self.qzlim[0]
@@ -78,6 +90,14 @@ class gisaxsExperiment:
         a = self.gisaxs_num.index(imnum)
         thickness = self.thickness[a]
         samx = self.samx[a]
+        time_s = self.time[a]
+        time_m = time_s/60
+        time_string = 'ERROR: time_format set incorrectly. Chose minutes or seconds.'
+
+        if self.time_format == 'minutes':
+            time_string = ' | t=' + "%0.1f" % time_m + ' min'
+        elif self.time_format == 'seconds':
+            time_string = ' | t=' + "%0.1f" % time_s + ' s'
 
         im = mpimg.imread(self.getPath(imnum))
         # we need to flip the image to get the right pixels
@@ -85,9 +105,12 @@ class gisaxsExperiment:
         im = np.flipud(np.flipud(im)[pz1:pz2, py1:py2])
 
         plt.imshow(im, norm=mpcl.LogNorm(), clim=self.clim, extent=[qy1, qy2, qz1, qz2])
-        plt.title('d=' + str(thickness) + 'nm | samx=' + str(samx))
+        plt.title('d=' + str(thickness) + 'nm | samx=' + str(samx) + time_string)
         plt.xlabel('q_y [nm^(-1)]')
         plt.ylabel('q_z [nm^(-1]]')
+
+    def showImg(self, imnum):
+        self.plotImg(imnum)
         plt.show()
 
     # given a coordinate qy, qz, find and return the corresponding pixels
@@ -110,6 +133,26 @@ class gisaxsExperiment:
             self.gisaxs_num.append(int(self.gisaxsData[i,0]))
             self.samx.append(self.gisaxsData[i,2])
 
+    def saveImages(self, range=False):
+        if not range:
+            range = self.gisaxs_num
 
+        for imnum in range:
+            self.plotImg(imnum)
+            leading_zeros = self.getLeadingZeros(imnum)
+            plt.savefig(leading_zeros*'0' + str(imnum) + '.png', bbox_inches='tight', dpi=self.dpi)
+            plt.clf()
+
+    # used to load peakfitting data from DPDAK
+    def loadDPDAK(self, dpdak_file):
+        peakfit_data = np.genfromtxt(dpdak_file, skip_header=4)
+        plt.plot(self.time, peakfit_data[0,:], '.')
+        plt.ylim([0.195,0.216])
+        plt.show()
+
+# remember that the offset parameter is the time ADDED to the WLI measurements
 test = gisaxsExperiment('test_wli.csv', 'test_gisaxs.csv', 'C:\Scattering\CHESS_2015_DATA\corr\pspb05_###.tif', 0)
-test.showImg(180)
+test.time_format = 'minutes'
+test.phi_plot = True
+test.loadDPDAK('test_dpdak.dat')
+test.showWLI()
