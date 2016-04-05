@@ -47,10 +47,6 @@ class gisaxsExperiment:
         # sync data
         self.syncData()
 
-    def getLeadingZeros(self, imnum):
-        num_len = self.tifpath.count('#')
-        num_str = str(imnum)
-        return (num_len - len(num_str))
 
     def showWLI(self):
         x = np.array(self.time)
@@ -73,8 +69,10 @@ class gisaxsExperiment:
         plt.show()
 
     def getPath(self, imnum):
-        leading_zeros = self.getLeadingZeros(imnum)
-        full_path = self.tifpath.replace(len(str(imnum))*'#', leading_zeros*'0' + str(imnum))
+        num_len = self.tifpath.count('#')
+        num_str = str(imnum)
+        leading_zeros = num_len - len(num_str)
+        full_path = self.tifpath.replace(num_len*'#', leading_zeros*'0' + str(imnum))
         return full_path
 
     def plotImg(self, imnum):
@@ -139,23 +137,33 @@ class gisaxsExperiment:
 
         for imnum in range:
             self.plotImg(imnum)
-            leading_zeros = self.getLeadingZeros(imnum)
+            num_len = self.tifpath.count('#')
+            num_str = str(imnum)
+            leading_zeros = num_len - len(num_str)
             plt.savefig(leading_zeros*'0' + str(imnum) + '.png', bbox_inches='tight', dpi=self.dpi)
             plt.clf()
 
-    def DpdakPlot(self, dpdak_file, row=0, yrange=False, yname=False, show_wli=True):
+    def dpdakPlot(self, dpdak_file, row=0, yrange=False, yname=False, show_wli=True, samx_range=False):
         peakfit_data = np.genfromtxt(dpdak_file, skip_header=4)
 
         fig, ax1 = plt.subplots()
         y = peakfit_data[row,:]
-
+        y2 = np.array(self.thickness)
         x = np.array(self.time)
+        x2 = np.array(self.time)
+        samx = np.array(self.samx)
+
+        if samx_range:
+            x = x[(samx_range[0] <= samx) & (samx_range[1] >= samx)]
+            y = y[(samx_range[0] <= samx) & (samx_range[1] >= samx)]
+
         ax1.set_xlabel('ERROR: time_format set incorrectly. Chose minutes or seconds.')
         if self.time_format == 'seconds':
             ax1.set_xlabel('time [s]')
         elif self.time_format == 'minutes':
             ax1.set_xlabel('time [min]')
             x = x / 60.0
+            x2 = x2 / 60.0
 
         ax1.plot(x, y, '.')
 
@@ -171,8 +179,6 @@ class gisaxsExperiment:
 
         if show_wli:
             ax2 = ax1.twinx()
-            y2 = self.thickness
-
             if self.phi_plot:
                 y2 = self.Ddry / y2
                 ax2.set_ylabel('$\phi$', color='g')
@@ -182,12 +188,6 @@ class gisaxsExperiment:
             for tl in ax2.get_yticklabels():
                 tl.set_color('g')
 
-            ax2.plot(x, y2, '-g')
+            ax2.plot(x2, y2, '-g')
 
         plt.show()
-
-# remember that the offset parameter is the time ADDED to the WLI measurements
-test = gisaxsExperiment('test_wli.csv', 'test_gisaxs.csv', 'C:\Scattering\CHESS_2015_DATA\corr\pspb05_###.tif')
-test.phi_plot = False
-test.DpdakPlot('test_dpdak.dat', row=0, yrange=[0.185, 0.22], yname='q [nm^(-1)]')
-test.showWLI()
