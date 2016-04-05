@@ -185,9 +185,3 @@ class gisaxsExperiment:
             ax2.plot(x, y2, '-g')
 
         plt.show()
-
-# remember that the offset parameter is the time ADDED to the WLI measurements
-test = gisaxsExperiment('test_wli.csv', 'test_gisaxs.csv', 'C:\Scattering\CHESS_2015_DATA\corr\pspb05_###.tif')
-test.phi_plot = False
-test.DpdakPlot('test_dpdak.dat', row=0, yrange=[0.185, 0.22], yname='q [nm^(-1)]')
-test.showWLI()
