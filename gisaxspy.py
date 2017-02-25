@@ -103,6 +103,7 @@ class gisaxsExperiment:
 
         plt.imshow(im, norm=mpcl.LogNorm(), clim=self.clim, extent=[qy1, qy2, qz1, qz2])
         plt.title('d=' + str(thickness) + 'nm | samx=' + str(samx) + time_string)
+        plt.colorbar()
         plt.xlabel('q_y [nm^(-1)]')
         plt.ylabel('q_z [nm^(-1]]')
 
